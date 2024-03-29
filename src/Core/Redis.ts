@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { RedisClient, createClient } from 'redis';
+import { RedisClientType, createClient } from 'redis';
 import { Config } from './Config';
 
 export const ERR_DB_NOT_INIT = Error('Redis is not initialized');
@@ -12,19 +12,21 @@ export declare interface Redis {
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Redis extends EventEmitter {
-    public client: RedisClient;
+    public client: RedisClientType;
 
     constructor(config: Config) {
         super();
 
-        const redisConfig = config.cache;
+        const url = config.cache.host;
 
-        this.client = createClient({ host: redisConfig.host, port: redisConfig.port });
+        this.client = createClient({ url });
 
         this.client.on('ready', () => {
             console.log('[Redis] Connected successfully to server');
 
             this.emit('connect', this.client);
         });
+
+        this.client.connect();
     }
 }

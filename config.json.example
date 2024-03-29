@@ -19,8 +19,7 @@
         "name": "analysisbot"
     },
     "cache": {
-        "host": "127.0.0.1",
-        "port": 6379
+        "host": "redis://127.0.0.1:6379"
     },
     "web": {
         "host": "0.0.0.0",

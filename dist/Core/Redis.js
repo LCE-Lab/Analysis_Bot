@@ -8,12 +8,13 @@ class Redis extends events_1.EventEmitter {
     client;
     constructor(config) {
         super();
-        const redisConfig = config.cache;
-        this.client = (0, redis_1.createClient)({ host: redisConfig.host, port: redisConfig.port });
+        const url = config.cache.host;
+        this.client = (0, redis_1.createClient)({ url });
         this.client.on('ready', () => {
             console.log('[Redis] Connected successfully to server');
             this.emit('connect', this.client);
         });
+        this.client.connect();
     }
 }
 exports.Redis = Redis;

@@ -23,7 +23,6 @@ export interface DBConfig {
 
 export interface RedisConfig {
     host: string
-    port: number
 }
 
 export interface RecaptchaConfig {
