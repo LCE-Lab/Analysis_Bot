@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const util_1 = require("util");
+exports.CacheManager = void 0;
 const Redis_1 = require("./Redis");
 class CacheManager {
+    client;
     constructor(core) {
         core.on('ready', () => {
             if (!core.cache.client)
@@ -13,20 +14,17 @@ class CacheManager {
     async setByTTL(key, value, ttl) {
         if (!this.client)
             throw Redis_1.ERR_DB_NOT_INIT;
-        await this.client.set([key, value, 'EX', ttl]);
+        await this.client.set(key, value, { EX: ttl });
     }
     async set(key, value) {
         if (!this.client)
             throw Redis_1.ERR_DB_NOT_INIT;
-        await this.client.set([key, value]);
+        await this.client.set(key, value);
     }
     get(key) {
         if (!this.client)
             throw Redis_1.ERR_DB_NOT_INIT;
-        const getAsync = util_1.promisify(this.client.get).bind(this.client);
-        return getAsync(key).then((result) => {
-            return result;
-        });
+        return this.client.get(key);
     }
     async incr(key) {
         if (!this.client)
