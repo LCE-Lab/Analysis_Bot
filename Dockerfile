@@ -1,4 +1,4 @@
-FROM node:20
+FROM node:21
 ENV NODE_ENV=production
 WORKDIR /app
 COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
