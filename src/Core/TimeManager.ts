@@ -1,9 +1,9 @@
-import { Collection, ObjectID } from 'mongodb';
+import { Collection, ObjectId } from 'mongodb';
 import { Core } from '..';
 import { ERR_DB_NOT_INIT } from './MongoDB';
 
 export interface ITime {
-    _id: ObjectID;
+    _id: ObjectId;
     serverID: string;
     userID: string;
     timeStamp: number;
@@ -25,12 +25,14 @@ export class TimeManager {
     public async create(serverID: string, userID: string, timeStamp: number, type: string) {
         if (!this.database) throw ERR_DB_NOT_INIT;
 
-        return (await this.database.insertOne({
+        const data = {
             serverID,
             userID,
             timeStamp,
             type
-        } as ITime)).ops[0] as ITime;
+        } as ITime;
+
+        return (await this.database.insertOne(data)).acknowledged ? data : null;
     }
 
     public async get(serverID: string, startTime: number, endTime: number) {
@@ -60,6 +62,6 @@ export class TimeManager {
     public async getCountByUserAndType(serverID: string, userID: string, startTime: number, endTime: number, type: string) {
         if (!this.database) throw ERR_DB_NOT_INIT;
 
-        return this.database.find({ serverID, userID, timeStamp: { $gte: startTime, $lt: endTime }, type }).count();
+        return this.database.countDocuments({ serverID, userID, timeStamp: { $gte: startTime, $lt: endTime }, type });
     }
 }

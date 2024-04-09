@@ -9,7 +9,8 @@ class MongoDB extends events_1.EventEmitter {
     constructor(config) {
         super();
         const dbConfig = config.database;
-        mongodb_1.MongoClient.connect(dbConfig.host, { useNewUrlParser: true, useUnifiedTopology: true }).then(client => {
+        const client = new mongodb_1.MongoClient(dbConfig.host);
+        client.connect().then(() => {
             console.log('[MongoDB] Connected successfully to server');
             this.client = client.db(dbConfig.name);
             this.emit('connect', this.client);
