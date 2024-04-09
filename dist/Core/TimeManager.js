@@ -15,12 +15,13 @@ class TimeManager {
     async create(serverID, userID, timeStamp, type) {
         if (!this.database)
             throw MongoDB_1.ERR_DB_NOT_INIT;
-        return (await this.database.insertOne({
+        const data = {
             serverID,
             userID,
             timeStamp,
             type
-        })).ops[0];
+        };
+        return (await this.database.insertOne(data)).acknowledged ? data : null;
     }
     async get(serverID, startTime, endTime) {
         if (!this.database)
@@ -45,7 +46,7 @@ class TimeManager {
     async getCountByUserAndType(serverID, userID, startTime, endTime, type) {
         if (!this.database)
             throw MongoDB_1.ERR_DB_NOT_INIT;
-        return this.database.find({ serverID, userID, timeStamp: { $gte: startTime, $lt: endTime }, type }).count();
+        return this.database.countDocuments({ serverID, userID, timeStamp: { $gte: startTime, $lt: endTime }, type });
     }
 }
 exports.TimeManager = TimeManager;

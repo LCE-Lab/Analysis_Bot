@@ -1,9 +1,9 @@
-import { Collection, ObjectID } from 'mongodb';
+import { Collection, ObjectId } from 'mongodb';
 import { Core } from '..';
 import { ERR_DB_NOT_INIT } from './MongoDB';
 
 export interface ISet {
-    _id: ObjectID;
+    _id: ObjectId;
     serverID: string;
     settings: {
         rankChannelID: string;
@@ -28,7 +28,7 @@ export class SetManager {
     public async create(serverID: string, rankChannelID: string = '', rankDisplay: boolean = false, continuousChannelID: string = '', continuousDisplay: boolean = false) {
         if (!this.database) throw ERR_DB_NOT_INIT;
 
-        return (await this.database.insertOne({
+        const data = {
             serverID,
             settings: {
                 rankChannelID,
@@ -36,7 +36,9 @@ export class SetManager {
                 continuousChannelID,
                 continuousDisplay
             }
-        } as ISet)).ops[0] as ISet;
+        } as ISet;
+
+        return (await this.database.insertOne(data)).acknowledged ? data : null;
     }
 
     public async get(serverID: string) {
@@ -66,6 +68,6 @@ export class SetManager {
             { serverID },
             set,
             { upsert: true }
-        )).value;
+        ));
     }
 }

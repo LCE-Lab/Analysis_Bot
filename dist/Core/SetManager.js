@@ -15,7 +15,7 @@ class SetManager {
     async create(serverID, rankChannelID = '', rankDisplay = false, continuousChannelID = '', continuousDisplay = false) {
         if (!this.database)
             throw MongoDB_1.ERR_DB_NOT_INIT;
-        return (await this.database.insertOne({
+        const data = {
             serverID,
             settings: {
                 rankChannelID,
@@ -23,7 +23,8 @@ class SetManager {
                 continuousChannelID,
                 continuousDisplay
             }
-        })).ops[0];
+        };
+        return (await this.database.insertOne(data)).acknowledged ? data : null;
     }
     async get(serverID) {
         if (!this.database)
@@ -45,7 +46,7 @@ class SetManager {
         else if (continuousChannelID && continuousDisplay !== null) {
             set = { $set: { 'settings.continuousChannelID': continuousChannelID, 'settings.continuousDisplay': continuousDisplay } };
         }
-        return (await this.database.findOneAndUpdate({ serverID }, set, { upsert: true })).value;
+        return (await this.database.findOneAndUpdate({ serverID }, set, { upsert: true }));
     }
 }
 exports.SetManager = SetManager;
