@@ -16,7 +16,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "eris": "^0.17.2",
-    "express": "^4.19.2",
+    "express": "^4.20.0",
     "helmet": "^4.6.0",
     "http-status-codes": "^2.3.0",
     "moment": "^2.30.1",
