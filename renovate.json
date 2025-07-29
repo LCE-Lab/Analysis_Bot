@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "schedule": [
+    "after 11pm every weekend",
+    "before 8am every weekend"
+  ],
+  "packageRules": [
+    {
+      "groupName": "eslint packages",
+      "matchPackageNames": [
+        "/.*eslint.*/"
+      ]
+    },
+    {
+      "groupName": "definitelyTyped packages",
+      "matchPackageNames": [
+        "@types/**"
+      ]
+    },
+    {
+      "groupName": "GitHub Actions",
+      "matchManagers": [
+        "github-actions"
+      ]
+    },
+    {
+      "groupName": "Dockerfile",
+      "matchManagers": [
+        "docker"
+      ]
+    }
+  ]
+}
