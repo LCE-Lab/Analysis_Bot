@@ -6,9 +6,8 @@
   "scripts": {
     "build": "tsc --pretty",
     "build:prod": "tsc --pretty --sourceMap false",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "lint:strict": "eslint . --max-warnings 0"
+    "lint": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings 0"
   },
   "keywords": [],
   "author": "",
