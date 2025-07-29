@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Core = void 0;
 const events_1 = require("events");
-const path_1 = require("path");
+const fs_1 = require("fs");
 const Bot_1 = require("./Component/Bot");
 const Web_1 = require("./Component/Web");
 const CacheManager_1 = require("./Core/CacheManager");
@@ -11,7 +11,7 @@ const Redis_1 = require("./Core/Redis");
 const SetManager_1 = require("./Core/SetManager");
 const TimeManager_1 = require("./Core/TimeManager");
 class Core extends events_1.EventEmitter {
-    config = require((0, path_1.resolve)('config.json'));
+    config = JSON.parse((0, fs_1.readFileSync)('config.json', { encoding: 'utf-8' }));
     database = new MongoDB_1.MongoDB(this.config);
     cache = new Redis_1.Redis(this.config);
     TimeManager = new TimeManager_1.TimeManager(this);
