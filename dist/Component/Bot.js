@@ -104,7 +104,7 @@ class Bot {
         try {
             user = (await this.bot.getRESTGuildMember(serverID, userID));
         }
-        catch (e) {
+        catch {
             msg.channel.createMessage(await this.genErrorMessage('User not found', user));
             return;
         }
