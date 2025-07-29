@@ -1,8 +1,9 @@
-FROM node:20-alpine
+FROM node:22-alpine
 ENV NODE_ENV=production
+RUN corepack enable
 WORKDIR /app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent && mv node_modules ../
+COPY ["package.json", "yarn.lock", "./"]
+RUN yarn install --production --immutable && mv node_modules ../
 COPY . .
 EXPOSE 8080
 CMD ["node", "./dist/index.js"]
