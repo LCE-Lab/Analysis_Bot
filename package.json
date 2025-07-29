@@ -33,7 +33,7 @@
     "@types/express": "^4.17.23",
     "@types/helmet": "0.0.45",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^20.19.9",
+    "@types/node": "^24.1.0",
     "@types/node-fetch": "^2.6.12",
     "@types/node-schedule": "^2.1.8",
     "@types/suncalc": "^1.9.2",
