@@ -79,6 +79,15 @@ typings/
 !.vscode/extensions.json
 .history
 
+# Yarn v2
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
 # End of https://www.gitignore.io/api/node,database,visualstudiocode
 
 # Ingore local sound data
