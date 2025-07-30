@@ -94,9 +94,10 @@ class Web {
     async errorURL(req, res) {
         throw new Error(http_status_codes_1.ReasonPhrases.NOT_FOUND);
     }
-    async reCaptcha(req) {
+    async reCaptcha(req, res) {
         if (!req.headers['g-recaptcha-token']) {
-            throw new Error('Invalid token');
+            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Invalid token.' });
+            return false;
         }
         const body = JSON.stringify({
             secret: this.config.recaptcha.secretKey,
@@ -109,20 +110,20 @@ class Web {
         });
         const data = await response.json();
         if (!data.success) {
-            throw new Error('Recaptcha verification failed');
+            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' });
+            console.warn(`[Web] ReCaptcha verification failed for user ${req.ip}: ${data['error-codes']}`);
+            return false;
         }
         if (data.score < this.config.recaptcha.minScore) {
-            throw new Error('Recaptcha score too low');
+            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' });
+            console.warn(`[Web] ReCaptcha score too low: ${data.score} for user ${req.ip}`);
+            return false;
         }
+        return true;
     }
     async getDay(req, res) {
-        try {
-            await this.reCaptcha(req);
-        }
-        catch {
-            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false });
+        if (!(await this.reCaptcha(req, res)))
             return;
-        }
         const dayTimeCache = await this.cacheManager.get(`${req.params.serverID}-Day`);
         if (dayTimeCache !== null) {
             res.status(http_status_codes_1.StatusCodes.OK).json({ data: JSON.parse(dayTimeCache) });
@@ -137,13 +138,8 @@ class Web {
         }
     }
     async getWeek(req, res) {
-        try {
-            await this.reCaptcha(req);
-        }
-        catch {
-            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false });
+        if (!(await this.reCaptcha(req, res)))
             return;
-        }
         const weekTimeCache = await this.cacheManager.get(`${req.params.serverID}-Week`);
         if (weekTimeCache !== null) {
             res.status(http_status_codes_1.StatusCodes.OK).json({ data: JSON.parse(weekTimeCache) });
@@ -161,13 +157,8 @@ class Web {
         }
     }
     async getCustomTime(req, res) {
-        try {
-            await this.reCaptcha(req);
-        }
-        catch {
-            res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false });
+        if (!(await this.reCaptcha(req, res)))
             return;
-        }
         const startTime = parseInt(req.query.start, 10);
         let endTime = parseInt(req.query.end, 10) + ONE_DAY_SECONDS;
         const now = this.getNowTime();

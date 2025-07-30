@@ -109,9 +109,10 @@ export class Web {
     throw new Error(ReasonPhrases.NOT_FOUND)
   }
 
-  private async reCaptcha(req: Request): Promise<void> {
+  private async reCaptcha(req: Request, res: Response): Promise<boolean> {
     if (!req.headers['g-recaptcha-token']) {
-      throw new Error('Invalid token')
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Invalid token.' })
+      return false
     }
     const body = JSON.stringify({
       secret: this.config.recaptcha.secretKey,
@@ -124,20 +125,20 @@ export class Web {
     })
     const data = await response.json()
     if (!data.success) {
-      throw new Error('Recaptcha verification failed')
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' })
+      console.warn(`[Web] ReCaptcha verification failed for user ${req.ip}: ${data['error-codes']}`)
+      return false
     }
     if (data.score < this.config.recaptcha.minScore) {
-      throw new Error('Recaptcha score too low')
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' })
+      console.warn(`[Web] ReCaptcha score too low: ${data.score} for user ${req.ip}`)
+      return false
     }
+    return true
   }
 
   private async getDay(req: Request, res: Response) {
-    try {
-      await this.reCaptcha(req)
-    } catch {
-      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false })
-      return
-    }
+    if (!(await this.reCaptcha(req, res))) return
 
     const dayTimeCache = await this.cacheManager.get(`${req.params.serverID}-Day`)
 
@@ -155,12 +156,7 @@ export class Web {
   }
 
   private async getWeek(req: Request, res: Response) {
-    try {
-      await this.reCaptcha(req)
-    } catch {
-      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false })
-      return
-    }
+    if (!(await this.reCaptcha(req, res))) return
 
     const weekTimeCache = await this.cacheManager.get(`${req.params.serverID}-Week`)
 
@@ -181,12 +177,7 @@ export class Web {
   }
 
   private async getCustomTime(req: Request, res: Response) {
-    try {
-      await this.reCaptcha(req)
-    } catch {
-      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false })
-      return
-    }
+    if (!(await this.reCaptcha(req, res))) return
 
     const startTime: number = parseInt(req.query.start as string, 10)
     let endTime: number = parseInt(req.query.end as string, 10) + ONE_DAY_SECONDS
