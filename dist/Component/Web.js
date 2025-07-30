@@ -99,14 +99,13 @@ class Web {
             res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Invalid token.' });
             return false;
         }
-        const body = JSON.stringify({
+        const options = new url_1.URLSearchParams({
             secret: this.config.recaptcha.secretKey,
             response: req.headers['g-recaptcha-token']
         });
         const response = await (0, node_fetch_1.default)('https://www.google.com/recaptcha/api/siteverify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body
+            body: options
         });
         const data = await response.json();
         if (!data.success) {
