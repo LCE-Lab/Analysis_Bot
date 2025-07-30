@@ -101,7 +101,6 @@ export class Web {
     this.server.get('/api/day/:serverID', this.route(this.getDay))
     this.server.get('/api/week/:serverID', this.route(this.getWeek))
     this.server.get('/api/custom/:serverID', this.route(this.getCustomTime))
-    this.server.get('/api/verify/:token', this.route(this.reCaptcha))
     this.server.get('*', this.route(this.errorURL))
   }
 
@@ -110,26 +109,36 @@ export class Web {
     throw new Error(ReasonPhrases.NOT_FOUND)
   }
 
-  private async reCaptcha(req: Request, res: Response) {
-    if (!req.params.token) {
-      res.status(StatusCodes.UNAUTHORIZED).json({ error: 'Invalid token' })
-    } else {
-      const options = new URLSearchParams({
-        secret: this.config.recaptcha.secretKey,
-        response: req.params.token
-      })
-      await fetch('https://www.google.com/recaptcha/api/siteverify', {
-        method: 'POST',
-        body: options
-      })
-        .then(response => response.json())
-        .then(data => {
-          res.status(StatusCodes.OK).json({ data })
-        })
+  private async reCaptcha(req: Request, res: Response): Promise<boolean> {
+    if (!req.headers['g-recaptcha-token']) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Invalid token.' })
+      return false
     }
+    const options = new URLSearchParams({
+      secret: this.config.recaptcha.secretKey,
+      response: req.headers['g-recaptcha-token'] as string
+    })
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      body: options
+    })
+    const data = await response.json()
+    if (!data.success) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' })
+      console.warn(`[Web] ReCaptcha verification failed for user ${req.ip}: ${data['error-codes']}`)
+      return false
+    }
+    if (data.score < this.config.recaptcha.minScore) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Verification failed.' })
+      console.warn(`[Web] ReCaptcha score too low: ${data.score} for user ${req.ip}`)
+      return false
+    }
+    return true
   }
 
   private async getDay(req: Request, res: Response) {
+    if (!(await this.reCaptcha(req, res))) return
+
     const dayTimeCache = await this.cacheManager.get(`${req.params.serverID}-Day`)
 
     if (dayTimeCache !== null) {
@@ -146,6 +155,8 @@ export class Web {
   }
 
   private async getWeek(req: Request, res: Response) {
+    if (!(await this.reCaptcha(req, res))) return
+
     const weekTimeCache = await this.cacheManager.get(`${req.params.serverID}-Week`)
 
     if (weekTimeCache !== null) {
@@ -165,6 +176,8 @@ export class Web {
   }
 
   private async getCustomTime(req: Request, res: Response) {
+    if (!(await this.reCaptcha(req, res))) return
+
     const startTime: number = parseInt(req.query.start as string, 10)
     let endTime: number = parseInt(req.query.end as string, 10) + ONE_DAY_SECONDS
     const now = this.getNowTime()

@@ -28,7 +28,8 @@
         "devMode": false,
         "origin": "*",
         "recaptcha": {
-            "secretKey": ""
+            "secretKey": "",
+            "minScore": 0.7
         },
         "cacheDayTTL": 10
     }
