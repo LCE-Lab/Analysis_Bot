@@ -110,6 +110,9 @@ class Web {
         if (!data.success) {
             throw new Error('Recaptcha verification failed');
         }
+        if (data.score < this.config.recaptcha.minScore) {
+            throw new Error('Recaptcha score too low');
+        }
     }
     async getDay(req, res) {
         try {

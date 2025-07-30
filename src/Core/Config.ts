@@ -27,6 +27,7 @@ export interface RedisConfig {
 
 export interface RecaptchaConfig {
   secretKey: string
+  minScore: number
 }
 
 export interface WebConfig {
