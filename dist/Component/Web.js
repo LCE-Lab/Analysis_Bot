@@ -98,13 +98,14 @@ class Web {
         if (!req.headers['g-recaptcha-token']) {
             throw new Error('Invalid token');
         }
-        const options = new url_1.URLSearchParams({
+        const body = JSON.stringify({
             secret: this.config.recaptcha.secretKey,
             response: req.headers['g-recaptcha-token']
         });
         const response = await (0, node_fetch_1.default)('https://www.google.com/recaptcha/api/siteverify', {
             method: 'POST',
-            body: options
+            headers: { 'Content-Type': 'application/json' },
+            body
         });
         const data = await response.json();
         if (!data.success) {

@@ -8,7 +8,7 @@ import morgan from 'morgan'
 import fetch from 'node-fetch'
 import schedule from 'node-schedule'
 import SunCalc from 'suncalc'
-import { parse, URLSearchParams } from 'url'
+import { parse } from 'url'
 import { Core } from '..'
 import { CacheManager } from '../Core/CacheManager'
 import { ITime, TimeManager } from '../Core/TimeManager'
@@ -113,13 +113,14 @@ export class Web {
     if (!req.headers['g-recaptcha-token']) {
       throw new Error('Invalid token')
     }
-    const options = new URLSearchParams({
+    const body = JSON.stringify({
       secret: this.config.recaptcha.secretKey,
       response: req.headers['g-recaptcha-token'] as string
     })
     const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
-      body: options
+      headers: { 'Content-Type': 'application/json' },
+      body
     })
     const data = await response.json()
     if (!data.success) {
