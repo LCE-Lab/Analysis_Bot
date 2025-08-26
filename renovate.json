@@ -3,11 +3,59 @@
   "extends": [
     "config:recommended"
   ],
+  "labels": [
+    "type:dependencies"
+  ],
   "schedule": [
     "after 11pm every weekend",
     "before 8am every weekend"
   ],
   "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": false,
+      "addLabels": [
+        "update:minor"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": false,
+      "addLabels": [
+        "status:ready-to-merge"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "addLabels": [
+        "update:major"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "pin",
+        "pinDigest",
+        "digest",
+        "lockFileMaintenance",
+        "rollback",
+        "bump",
+        "replacement"
+      ],
+      "automerge": false,
+      "addLabels": [
+        "update:misc"
+      ]
+    },
     {
       "groupName": "eslint packages",
       "matchPackageNames": [
@@ -21,15 +69,29 @@
       ]
     },
     {
+      "matchManagers": [
+        "npm"
+      ],
+      "addLabels": [
+        "package:npm"
+      ]
+    },
+    {
       "groupName": "GitHub Actions",
       "matchManagers": [
         "github-actions"
+      ],
+      "addLabels": [
+        "package:github-actions"
       ]
     },
     {
       "groupName": "Dockerfile",
       "matchManagers": [
         "docker"
+      ],
+      "addLabels": [
+        "package:docker"
       ]
     }
   ]

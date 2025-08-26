@@ -1,0 +1,75 @@
+queue_rules:
+  - name: dev-queue
+    queue_conditions:
+      - and:
+          - base=dev
+          - check-success=build-and-push-image
+          - check-success=build
+          - 'label!=status:blocked'
+  - name: prod-queue
+    queue_conditions:
+      - and:
+          - base=prod
+          - check-success=build-and-push-image
+          - check-success=build
+          - 'label!=status:blocked'
+
+pull_request_rules:
+  - name: Automatic approval with label
+    conditions:
+      - base=dev
+      - 'label!=status:blocked'
+      - 'label=status:ready-to-merge'
+      - '#approved-reviews-by=0'
+      - check-success=build-and-push-image
+      - check-success=build
+    actions:
+      review:
+        type: APPROVE
+
+  - name: Auto Merge renovate minor dep
+    conditions:
+      - base=dev
+      - author=renovate[bot]
+      - 'label!=status:blocked'
+      - 'label=status:ready-to-merge'
+      - '#commits-behind<5'
+      - check-success=build-and-push-image
+      - check-success=build
+    actions:
+      merge:
+
+  - name: Merge branch into dev (Label)
+    conditions:
+      - base=dev
+      - author!=renovate[bot]
+      - 'label!=status:blocked'
+      - 'label=status:ready-to-merge'
+      - check-success=build-and-push-image
+      - check-success=build
+    actions:
+      queue:
+        name: dev-queue
+
+  - name: Merge branch into dev (manual approval)
+    conditions:
+      - base=dev
+      - author!=renovate[bot]
+      - 'label!=status:blocked'
+      - '#approved-reviews-by>=1'
+      - check-success=build-and-push-image
+      - check-success=build
+    actions:
+      queue:
+        name: dev-queue
+
+  - name: Merge Production
+    conditions:
+      - base=prod
+      - 'label!=status:blocked'
+      - '#approved-reviews-by>=1'
+      - check-success=build-and-push-image
+      - check-success=build
+    actions:
+      queue:
+        name: prod-queue

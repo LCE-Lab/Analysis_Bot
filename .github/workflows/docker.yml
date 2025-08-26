@@ -1,4 +1,4 @@
-name: Analysis Bot Actions
+name: Docker Image
 on: [push, pull_request]
 
 env:
