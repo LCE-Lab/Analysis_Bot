@@ -1740,8 +1740,8 @@ __metadata:
   linkType: hard
 
 "mongodb@npm:^6.18.0":
-  version: 6.18.0
-  resolution: "mongodb@npm:6.18.0"
+  version: 6.19.0
+  resolution: "mongodb@npm:6.19.0"
   dependencies:
     "@mongodb-js/saslprep": "npm:^1.1.9"
     bson: "npm:^6.10.4"
@@ -1752,7 +1752,7 @@ __metadata:
     gcp-metadata: ^5.2.0
     kerberos: ^2.0.1
     mongodb-client-encryption: ">=6.0.0 <7"
-    snappy: ^7.2.2
+    snappy: ^7.3.2
     socks: ^2.7.1
   peerDependenciesMeta:
     "@aws-sdk/credential-providers":
@@ -1769,7 +1769,7 @@ __metadata:
       optional: true
     socks:
       optional: true
-  checksum: 10c0/063c70b72d5e3a75bf2edb9743113a7006864d7a501086d417036371c341bd6ea3d27a01cb78b187f8eca5633eaade3ca9793c63f08ed5df50edfd1696ccc426
+  checksum: 10c0/b25d6bedbb3d85b059fc6aa1e48d585722945b5fdf96cf6767a48069c13636e5e1d004908b1f095f580d0d03c8973c37f55325ce659a8c7f35c7414be23627fc
   languageName: node
   linkType: hard
 
