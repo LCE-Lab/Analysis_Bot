@@ -23,17 +23,6 @@
     },
     {
       "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "matchCurrentVersion": "!/^0/",
-      "automerge": false,
-      "addLabels": [
-        "status:ready-to-merge"
-      ]
-    },
-    {
-      "matchUpdateTypes": [
         "major"
       ],
       "automerge": false,
