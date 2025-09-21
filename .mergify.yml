@@ -3,15 +3,19 @@ queue_rules:
     queue_conditions:
       - and:
           - base=dev
-          - check-success=build-and-push-image
-          - check-success=build
+          - check-success=security-scan
+          - check-success=scan-docker
+          - check-success=docker-image
+          - check-success=build-and-test
           - 'label!=status:blocked'
   - name: prod-queue
     queue_conditions:
       - and:
           - base=prod
-          - check-success=build-and-push-image
-          - check-success=build
+          - check-success=security-scan
+          - check-success=scan-docker
+          - check-success=docker-image
+          - check-success=build-and-test
           - 'label!=status:blocked'
 
 pull_request_rules:
@@ -21,8 +25,10 @@ pull_request_rules:
       - 'label!=status:blocked'
       - 'label=status:ready-to-merge'
       - '#approved-reviews-by=0'
-      - check-success=build-and-push-image
-      - check-success=build
+      - check-success=security-scan
+      - check-success=scan-docker
+      - check-success=docker-image
+      - check-success=build-and-test
     actions:
       review:
         type: APPROVE
@@ -34,8 +40,10 @@ pull_request_rules:
       - 'label!=status:blocked'
       - 'label=status:ready-to-merge'
       - '#commits-behind<5'
-      - check-success=build-and-push-image
-      - check-success=build
+      - check-success=security-scan
+      - check-success=scan-docker
+      - check-success=docker-image
+      - check-success=build-and-test
     actions:
       merge:
 
@@ -45,8 +53,10 @@ pull_request_rules:
       - author!=renovate[bot]
       - 'label!=status:blocked'
       - 'label=status:ready-to-merge'
-      - check-success=build-and-push-image
-      - check-success=build
+      - check-success=security-scan
+      - check-success=scan-docker
+      - check-success=docker-image
+      - check-success=build-and-test
     actions:
       queue:
         name: dev-queue
@@ -57,8 +67,10 @@ pull_request_rules:
       - author!=renovate[bot]
       - 'label!=status:blocked'
       - '#approved-reviews-by>=1'
-      - check-success=build-and-push-image
-      - check-success=build
+      - check-success=security-scan
+      - check-success=scan-docker
+      - check-success=docker-image
+      - check-success=build-and-test
     actions:
       queue:
         name: dev-queue
@@ -68,8 +80,10 @@ pull_request_rules:
       - base=prod
       - 'label!=status:blocked'
       - '#approved-reviews-by>=1'
-      - check-success=build-and-push-image
-      - check-success=build
+      - check-success=security-scan
+      - check-success=scan-docker
+      - check-success=docker-image
+      - check-success=build-and-test
     actions:
       queue:
         name: prod-queue

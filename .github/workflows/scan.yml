@@ -1,0 +1,62 @@
+name: Repository Security Scan
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - 'dev'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect dependency changes
+        id: dependencies
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }} --depth=1
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -E '(yarn.lock)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "### Note" >> $GITHUB_STEP_SUMMARY
+            echo "No dependency files changed. Skipping failure on vulnerabilities." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'fs'
+          output: trivy.md
+          trivy-config: trivy.yaml
+          exit-code: ${{ steps.dependencies.outputs.changed == 'true' && '1' || '0' }}
+
+      - name: Publish Trivy Output to Summary
+        if: always()
+        run: |
+          if [[ -s trivy.md ]]; then
+            {
+              echo "### Repository Security Output"
+              echo "<details><summary>Click to expand</summary>"
+              echo ""
+              echo '```terraform'
+              cat trivy.md
+              echo '```'
+              echo "</details>"
+            } >> $GITHUB_STEP_SUMMARY
+          fi

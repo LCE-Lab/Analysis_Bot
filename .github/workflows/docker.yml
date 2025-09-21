@@ -1,13 +1,62 @@
-name: Docker Image
-on: [push, pull_request]
+name: Build Docker Image
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - 'dev'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-image:
+  scan-docker:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build Test Image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          load: true
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          output: trivy.md
+          trivy-config: trivy.yaml
+
+      - name: Publish Trivy Output to Summary
+        if: always()
+        run: |
+          if [[ -s trivy.md ]]; then
+            {
+              echo "### Docker Image Security Output"
+              echo "<details><summary>Click to expand</summary>"
+              echo ""
+              echo '```terraform'
+              cat trivy.md
+              echo '```'
+              echo "</details>"
+            } >> $GITHUB_STEP_SUMMARY
+          fi
+
+  docker-image:
+    runs-on: ubuntu-latest
+    needs: scan-docker
     permissions:
       contents: read
       packages: write
