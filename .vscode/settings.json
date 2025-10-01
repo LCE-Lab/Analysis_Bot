@@ -1,0 +1,27 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "tsconfig.json": "tsconfig.*.json, env.d.ts",
+    "vite.config.*": "jsconfig*, vitest.config.*, cypress.config.*, playwright.config.*",
+    "package.json": "package-lock.json, pnpm*, .yarnrc*, yarn*, .eslint*, eslint*, .prettier*, prettier*, .editorconfig, bun*, renovate.json, .mergify.yml, .browserslistrc, trivy.yaml",
+    "tailwindcss.config.js": "tailwind.config.*, postcss.config.*",
+    ".gitignore": ".git*",
+    ".env.example": ".env*",
+    "Dockerfile": ".dockerignore, docker-compose.yml, nginx.conf",
+    "README.md": "CHANGELOG.md, CONTRIBUTING.md, LICENSE"
+  },
+  "eslint.format.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "vue"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "npm.packageManager": "yarn"
+}

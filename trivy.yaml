@@ -1,0 +1,6 @@
+dependency-tree: true
+exit-code: 1
+vulnerability:
+  ignore-unfixed: true
+pkg:
+  include-dev-deps: true
