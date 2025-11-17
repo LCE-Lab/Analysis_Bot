@@ -1,6 +1,6 @@
 import cors from 'cors'
-import { CommandClient, Member } from 'eris'
-import express, { Application, NextFunction, Request, Response } from 'express'
+import type { CommandClient, Member } from 'eris'
+import express, { type Application, type NextFunction, type Request, type Response } from 'express'
 import helmet from 'helmet'
 import { getStatusCode, ReasonPhrases, StatusCodes } from 'http-status-codes'
 import moment from 'moment'
@@ -9,10 +9,10 @@ import fetch from 'node-fetch'
 import schedule from 'node-schedule'
 import SunCalc from 'suncalc'
 import { parse, URLSearchParams } from 'url'
-import { Core } from '..'
-import { CacheManager } from '../Core/CacheManager'
-import { ITime, TimeManager } from '../Core/TimeManager'
-import { WebConfig } from '../Core/Config'
+import type { Core } from '..'
+import type { CacheManager } from '../Core/CacheManager'
+import type { WebConfig } from '../Core/Config'
+import type { ITime, TimeManager } from '../Core/TimeManager'
 
 const ONE_DAY_SECONDS = 86400
 
@@ -148,7 +148,7 @@ export class Web {
       const endTime = this.getNowTime()
       const dayTime = await this.timeManager.get(req.params.serverID, startTime, endTime)
 
-      this.processData(dayTime, req.params.serverID, startTime, undefined).then(data => {
+      this.processData(dayTime, req.params.serverID, startTime, undefined).then((data) => {
         res.status(StatusCodes.OK).json({ data })
       })
     }
@@ -165,11 +165,11 @@ export class Web {
       const time = new Date()
       const midnight = time.setHours(0, 0, 0, 0) / 1000
       const day = time.getDay() === 0 ? 7 : time.getDay()
-      const startTime = (midnight - (day - 1) * ONE_DAY_SECONDS)
+      const startTime = midnight - (day - 1) * ONE_DAY_SECONDS
       const endTime = this.getNowTime()
       const weekTime = await this.timeManager.get(req.params.serverID, startTime, endTime)
 
-      this.processData(weekTime, req.params.serverID, startTime, endTime).then(data => {
+      this.processData(weekTime, req.params.serverID, startTime, endTime).then((data) => {
         res.status(StatusCodes.OK).json({ data })
       })
     }
@@ -187,7 +187,7 @@ export class Web {
     if (!isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
       const customTime = await this.timeManager.get(req.params.serverID, startTime, endTime)
 
-      this.processData(customTime, req.params.serverID, startTime, endTime).then(data => {
+      this.processData(customTime, req.params.serverID, startTime, endTime).then((data) => {
         res.status(StatusCodes.OK).json({ data })
       })
     } else {
@@ -197,10 +197,10 @@ export class Web {
 
   private async processData(raw: ITime[], serverID: string, startTime: number | undefined, endTime: number | undefined) {
     if (raw.length === 0) return ''
-    const dataRaw: { [key: string]: Array<{ time: string, type: string }> } = {}
-    const groups: Array<{ id: string, content: string }> = []
+    const dataRaw: { [key: string]: Array<{ time: string; type: string }> } = {}
+    const groups: Array<{ id: string; content: string }> = []
     // const dataSets: Array<{ content: string, start: string, end: string, group: string, type: string, className: string, title: string }> = [];
-    const dataSets: Array<{ [key: string]: string}> = []
+    const dataSets: Array<{ [key: string]: string }> = []
 
     for (const item of raw) {
       if (dataRaw[item.userID] === undefined) dataRaw[item.userID] = []
@@ -214,174 +214,279 @@ export class Web {
       if (dataRaw[key] === undefined) return
 
       const rawData = dataRaw[key]
-      await this.Bot.getRESTGuildMember(serverID, key).then(async (user: Member) => {
-        const userName = user.nick ? user.nick : user.username
-        let lastActivity: { time: string, type: string } | undefined
+      await this.Bot.getRESTGuildMember(serverID, key)
+        .then(async (user: Member) => {
+          const userName = user.nick ? user.nick : user.username
+          let lastActivity: { time: string; type: string } | undefined
 
-        for (const activity of rawData) {
-          if (lastActivity === undefined) {
-            if (startTime !== undefined) {
-              const lastData = await this.timeManager.getLastDataByUser(serverID, key, startTime)
-              if (lastData.length !== 0) {
-                lastActivity = { time: moment.unix(startTime).format('YYYY-MM-DD HH:mm:ss'), type: lastData[0].type }
+          for (const activity of rawData) {
+            if (lastActivity === undefined) {
+              if (startTime !== undefined) {
+                const lastData = await this.timeManager.getLastDataByUser(serverID, key, startTime)
+                if (lastData.length !== 0) {
+                  lastActivity = { time: moment.unix(startTime).format('YYYY-MM-DD HH:mm:ss'), type: lastData[0].type }
+                } else {
+                  lastActivity = activity
+                  continue
+                }
               } else {
                 lastActivity = activity
                 continue
               }
-            } else {
-              lastActivity = activity
-              continue
+            }
+            let keepLastActivity = false
+            switch (activity.type) {
+              case 'join': {
+                switch (lastActivity.type) {
+                  case 'join': {
+                    keepLastActivity = true
+                    break
+                  }
+                  case 'leave': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'offline',
+                      title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'afk': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'afk',
+                      title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'back': {
+                    keepLastActivity = true
+                    break
+                  }
+                  default: {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'unknown',
+                      title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                }
+                break
+              }
+              case 'leave': {
+                switch (lastActivity.type) {
+                  case 'join': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'online',
+                      title: `Online<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'leave': {
+                    keepLastActivity = true
+                    break
+                  }
+                  case 'afk': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'afk',
+                      title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'back': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'online',
+                      title: `Online<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  default: {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'unknown',
+                      title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                }
+                break
+              }
+              case 'afk': {
+                switch (lastActivity.type) {
+                  case 'join': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'online',
+                      title: `Online<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'leave': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'offline',
+                      title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'afk': {
+                    keepLastActivity = true
+                    break
+                  }
+                  case 'back': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'online',
+                      title: `Online<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  default: {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'unknown',
+                      title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                }
+                break
+              }
+              case 'back': {
+                switch (lastActivity.type) {
+                  case 'join': {
+                    keepLastActivity = true
+                    break
+                  }
+                  case 'leave': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'offline',
+                      title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'afk': {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'afk',
+                      title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                  case 'back': {
+                    keepLastActivity = true
+                    break
+                  }
+                  default: {
+                    dataSets.push({
+                      content: '',
+                      start: lastActivity.time,
+                      end: activity.time,
+                      group: userName,
+                      className: 'unknown',
+                      title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                    })
+                    break
+                  }
+                }
+                break
+              }
+              default: {
+                dataSets.push({
+                  content: '',
+                  start: lastActivity.time,
+                  end: activity.time,
+                  group: userName,
+                  className: 'unknown',
+                  title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                })
+                break
+              }
+            }
+            if (!keepLastActivity) lastActivity = activity
+          }
+
+          // last record
+          if (lastActivity !== undefined) {
+            const now = (endTime !== undefined ? moment.unix(endTime) : moment()).format('YYYY-MM-DD HH:mm:ss')
+
+            // tempData.push([lastActivity.time, 'Unknown', now]);
+            switch (lastActivity.type) {
+              case 'join': {
+                dataSets.push({ content: '', start: lastActivity.time, end: now, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${now}` })
+                break
+              }
+              case 'leave': {
+                dataSets.push({ content: '', start: lastActivity.time, end: now, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${now}` })
+                break
+              }
+              case 'afk': {
+                dataSets.push({ content: '', start: lastActivity.time, end: now, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${now}` })
+                break
+              }
+              case 'back': {
+                dataSets.push({ content: '', start: lastActivity.time, end: now, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${now}` })
+                break
+              }
+              default: {
+                break
+              }
             }
           }
-          let keepLastActivity = false
-          switch (activity.type) {
-            case 'join': {
-              switch (lastActivity.type) {
-                case 'join': {
-                  keepLastActivity = true
-                  break
-                }
-                case 'leave': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'afk': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'back': {
-                  keepLastActivity = true
-                  break
-                }
-                default: {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-              }
-              break
-            }
-            case 'leave': {
-              switch (lastActivity.type) {
-                case 'join': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'leave': {
-                  keepLastActivity = true
-                  break
-                }
-                case 'afk': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'back': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                default: {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-              }
-              break
-            }
-            case 'afk': {
-              switch (lastActivity.type) {
-                case 'join': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'leave': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'afk': {
-                  keepLastActivity = true
-                  break
-                }
-                case 'back': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                default: {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-              }
-              break
-            }
-            case 'back': {
-              switch (lastActivity.type) {
-                case 'join': {
-                  keepLastActivity = true
-                  break
-                }
-                case 'leave': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'afk': {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-                case 'back': {
-                  keepLastActivity = true
-                  break
-                }
-                default: {
-                  dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}`})
-                  break
-                }
-              }
-              break
-            }
-            default: {
-              dataSets.push({content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}`})
-              break
-            }
-          }
-          if (!keepLastActivity) lastActivity = activity
-        }
 
-        // last record
-        if (lastActivity !== undefined) {
-          const now = ((endTime !== undefined) ? moment.unix(endTime) : moment()).format('YYYY-MM-DD HH:mm:ss')
-
-          // tempData.push([lastActivity.time, 'Unknown', now]);
-          switch (lastActivity.type) {
-            case 'join': {
-              dataSets.push({content: '', start: lastActivity.time, end: now, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${now}`})
-              break
-            }
-            case 'leave': {
-              dataSets.push({content: '', start: lastActivity.time, end: now, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${now}`})
-              break
-            }
-            case 'afk': {
-              dataSets.push({content: '', start: lastActivity.time, end: now, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${now}`})
-              break
-            }
-            case 'back': {
-              dataSets.push({content: '', start: lastActivity.time, end: now, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${now}`})
-              break
-            }
-            default: {
-              break
-            }
-          }
-        }
-
-        groups.push({
-          id: userName,
-          content: `<img class="avatar" src="${user.avatarURL}" /><span class="name">${(user.nick ? user.nick : user.username).substr(0, 20)}</span>`
+          groups.push({
+            id: userName,
+            content: `<img class="avatar" src="${user.avatarURL}" /><span class="name">${(user.nick ? user.nick : user.username).substr(0, 20)}</span>`
+          })
         })
-      }).catch(() => {
-
-      })
+        .catch(() => {})
     }
 
     // Sunrise Sunset
-    let time = (startTime !== undefined) ? startTime : raw[0].timeStamp
+    let time = startTime !== undefined ? startTime : raw[0].timeStamp
     const end = Math.round(Date.now() / 1000)
 
     for (; time < end; time += ONE_DAY_SECONDS) {
@@ -389,13 +494,13 @@ export class Web {
       const sunLight = SunCalc.getTimes(date, 25.034276, 121.561696)
       const sunRise = moment(sunLight.sunrise).format('YYYY-MM-DD HH:mm:ss')
       const sunSet = moment(sunLight.sunset).format('YYYY-MM-DD HH:mm:ss')
-      dataSets.push({ content: '', start: sunRise, end: sunSet, type: 'background', className: 'sun'})
+      dataSets.push({ content: '', start: sunRise, end: sunSet, type: 'background', className: 'sun' })
     }
 
     return {
       properties: {
-        startTime: moment.unix((startTime !== undefined) ? startTime : raw[0].timeStamp).format('YYYY-MM-DD HH:mm:ss'),
-        endTime: moment.unix((endTime !== undefined) ? endTime : end).format('YYYY-MM-DD HH:mm:ss')
+        startTime: moment.unix(startTime !== undefined ? startTime : raw[0].timeStamp).format('YYYY-MM-DD HH:mm:ss'),
+        endTime: moment.unix(endTime !== undefined ? endTime : end).format('YYYY-MM-DD HH:mm:ss')
       },
       groups,
       dataSets
@@ -408,11 +513,11 @@ export class Web {
     const endTime = this.getNowTime()
     const cacheTTL = this.config.cacheDayTTL * 60
 
-    serverID.forEach(async id => {
+    serverID.forEach(async (id) => {
       const cacheDay = await this.timeManager.get(id, startTime, endTime)
 
       if (cacheDay.length !== 0) {
-        await this.processData(cacheDay, id, startTime, undefined).then(async data => {
+        await this.processData(cacheDay, id, startTime, undefined).then(async (data) => {
           const value = JSON.stringify(data)
           this.cacheManager.setByTTL(`${id}-Day`, value, cacheTTL)
         })
@@ -428,15 +533,15 @@ export class Web {
       const time = new Date()
       const midnight = time.setHours(0, 0, 0, 0) / 1000
       const day = time.getDay() === 0 ? 7 : time.getDay()
-      const startTime = (midnight - (day - 1) * ONE_DAY_SECONDS)
+      const startTime = midnight - (day - 1) * ONE_DAY_SECONDS
       const endTime = this.getNowTime()
       const cacheTTL = (8 - day) * ONE_DAY_SECONDS
 
-      serverID.forEach(async id => {
+      serverID.forEach(async (id) => {
         const cacheWeek = await this.timeManager.get(id, startTime, endTime)
 
         if (cacheWeek.length !== 0) {
-          await this.processData(cacheWeek, id, startTime, endTime).then(async data => {
+          await this.processData(cacheWeek, id, startTime, endTime).then(async (data) => {
             const value = JSON.stringify(data)
             this.cacheManager.setByTTL(`${id}-Week`, value, cacheTTL)
           })

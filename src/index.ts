@@ -1,14 +1,14 @@
-import { CommandClient } from 'eris'
+import type { CommandClient } from 'eris'
 import { EventEmitter } from 'events'
 import { readFileSync as readFile } from 'fs'
 import { Bot } from './Component/Bot'
 import { Web } from './Component/Web'
 import { CacheManager } from './Core/CacheManager'
+import type { Config } from './Core/Config'
 import { MongoDB } from './Core/MongoDB'
 import { Redis } from './Core/Redis'
 import { SetManager } from './Core/SetManager'
 import { TimeManager } from './Core/TimeManager'
-import { Config } from './Core/Config'
 
 export class Core extends EventEmitter {
   public readonly config: Config = JSON.parse(readFile('config.json', { encoding: 'utf-8' }))

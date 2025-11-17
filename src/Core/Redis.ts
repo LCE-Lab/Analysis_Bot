@@ -1,13 +1,13 @@
 import { EventEmitter } from 'events'
-import { RedisClientType, createClient } from 'redis'
-import { Config } from './Config'
+import { createClient, type RedisClientType } from 'redis'
+import type { Config } from './Config'
 
 export const ERR_DB_NOT_INIT = Error('Redis is not initialized')
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export declare interface Redis {
   // eslint-disable-next-line no-unused-vars
-  on(event: 'connect', listen: () => void): this;
+  on(event: 'connect', listen: () => void): this
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
