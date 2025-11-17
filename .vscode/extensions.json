@@ -3,8 +3,7 @@
     "vivaxy.vscode-conventional-commits",
     "mhutchie.git-graph",
     "EditorConfig.EditorConfig",
-    "dbaeumer.vscode-eslint",
-    "EditorConfig.EditorConfig",
-    "esbenp.prettier-vscode"
+    "biomejs.biome",
+    "redhat.vscode-yaml"
   ]
 }

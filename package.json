@@ -6,8 +6,9 @@
   "scripts": {
     "build": "tsc --pretty",
     "build:prod": "tsc --pretty --sourceMap false",
-    "lint": "eslint . --fix",
-    "lint:check": "eslint . --max-warnings 0"
+    "lint": "biome check --write",
+    "lint:unsafe": "biome check --write --unsafe",
+    "biome:ci": "biome ci"
   },
   "keywords": [],
   "author": "",
@@ -28,8 +29,7 @@
     "suncalc": "^1.9.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.0",
-    "@stylistic/eslint-plugin": "^5.5.0",
+    "@biomejs/biome": "2.3.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/helmet": "4.0.0",
@@ -38,10 +38,7 @@
     "@types/node-fetch": "^2.6.13",
     "@types/node-schedule": "^2.1.8",
     "@types/suncalc": "^1.9.2",
-    "eslint": "^9.39.0",
-    "globals": "^16.5.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c"
 }

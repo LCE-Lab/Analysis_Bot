@@ -88,13 +88,6 @@
       ]
     },
     {
-      "groupName": "eslint packages",
-      "matchPackageNames": [
-        "/.*eslint.*/"
-      ],
-      "minimumReleaseAge": "14 days"
-    },
-    {
       "groupName": "definitelyTyped packages",
       "matchPackageNames": [
         "@types/**"
