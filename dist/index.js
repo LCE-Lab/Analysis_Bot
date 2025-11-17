@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Core = void 0;
-const events_1 = require("events");
-const fs_1 = require("fs");
+const node_events_1 = require("node:events");
+const node_fs_1 = require("node:fs");
 const Bot_1 = require("./Component/Bot");
 const Web_1 = require("./Component/Web");
 const CacheManager_1 = require("./Core/CacheManager");
@@ -10,13 +10,13 @@ const MongoDB_1 = require("./Core/MongoDB");
 const Redis_1 = require("./Core/Redis");
 const SetManager_1 = require("./Core/SetManager");
 const TimeManager_1 = require("./Core/TimeManager");
-class Core extends events_1.EventEmitter {
-    config = JSON.parse((0, fs_1.readFileSync)('config.json', { encoding: 'utf-8' }));
+class Core extends node_events_1.EventEmitter {
+    config = JSON.parse((0, node_fs_1.readFileSync)('config.json', { encoding: 'utf-8' }));
     database = new MongoDB_1.MongoDB(this.config);
     cache = new Redis_1.Redis(this.config);
-    TimeManager = new TimeManager_1.TimeManager(this);
-    CacheManager = new CacheManager_1.CacheManager(this);
-    SetManager = new SetManager_1.SetManager(this);
+    _timeManager = new TimeManager_1.TimeManager(this);
+    _cacheManager = new CacheManager_1.CacheManager(this);
+    _setManager = new SetManager_1.SetManager(this);
     bot;
     constructor() {
         super();

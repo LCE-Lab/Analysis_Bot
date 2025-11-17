@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Web = void 0;
+const node_url_1 = require("node:url");
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -13,20 +14,19 @@ const morgan_1 = __importDefault(require("morgan"));
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const node_schedule_1 = __importDefault(require("node-schedule"));
 const suncalc_1 = __importDefault(require("suncalc"));
-const url_1 = require("url");
 const ONE_DAY_SECONDS = 86400;
 class Web {
     config;
     server;
     timeManager;
     cacheManager;
-    Bot;
+    _bot;
     constructor(core) {
         this.config = core.config.web;
-        this.timeManager = core.TimeManager;
-        this.cacheManager = core.CacheManager;
-        if (core.bot !== null || core.bot !== undefined) {
-            this.Bot = core.bot;
+        this.timeManager = core._timeManager;
+        this.cacheManager = core._cacheManager;
+        if (core.bot !== null && core.bot !== undefined) {
+            this._bot = core.bot;
         }
         else {
             throw new Error('Discord Client not defined');
@@ -59,8 +59,8 @@ class Web {
         this.server.use(this.checkRequst);
         this.server.use((0, morgan_1.default)('[Web] :remote-addr [:date[clf]] ":method :url HTTP/:http-version" :status :response-time ms - :res[content-length]'));
     }
-    async checkRequst(req, res, next) {
-        const reqURL = (0, url_1.parse)(req.url).query;
+    async checkRequst(req, _res, next) {
+        const reqURL = (0, node_url_1.parse)(req.url).query;
         const reg = /\[\w+\]/;
         if (reg.test(reqURL)) {
             next(new Error(http_status_codes_1.ReasonPhrases.BAD_REQUEST));
@@ -68,7 +68,7 @@ class Web {
         next();
     }
     async errorHandler() {
-        this.server.use((err, req, res, next) => {
+        this.server.use((err, _req, res, _next) => {
             if (err.message) {
                 res.status((0, http_status_codes_1.getStatusCode)(err.message)).json({
                     error: err.message
@@ -85,13 +85,13 @@ class Web {
         };
     }
     async registerRoutes() {
-        this.server.get('/api', (req, res) => res.send('Analysis Bot Web Server'));
+        this.server.get('/api', (_req, res) => res.send('Analysis Bot Web Server'));
         this.server.get('/api/day/:serverID', this.route(this.getDay));
         this.server.get('/api/week/:serverID', this.route(this.getWeek));
         this.server.get('/api/custom/:serverID', this.route(this.getCustomTime));
         this.server.get('*', this.route(this.errorURL));
     }
-    async errorURL(req, res) {
+    async errorURL(_req, _res) {
         throw new Error(http_status_codes_1.ReasonPhrases.NOT_FOUND);
     }
     async reCaptcha(req, res) {
@@ -99,7 +99,7 @@ class Web {
             res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ ok: false, message: 'Invalid token.' });
             return false;
         }
-        const options = new url_1.URLSearchParams({
+        const options = new node_url_1.URLSearchParams({
             secret: this.config.recaptcha.secretKey,
             response: req.headers['g-recaptcha-token']
         });
@@ -131,7 +131,7 @@ class Web {
             const startTime = new Date().setHours(0, 0, 0, 0) / 1000;
             const endTime = this.getNowTime();
             const dayTime = await this.timeManager.get(req.params.serverID, startTime, endTime);
-            this.processData(dayTime, req.params.serverID, startTime, undefined).then(data => {
+            this.processData(dayTime, req.params.serverID, startTime, undefined).then((data) => {
                 res.status(http_status_codes_1.StatusCodes.OK).json({ data });
             });
         }
@@ -147,10 +147,10 @@ class Web {
             const time = new Date();
             const midnight = time.setHours(0, 0, 0, 0) / 1000;
             const day = time.getDay() === 0 ? 7 : time.getDay();
-            const startTime = (midnight - (day - 1) * ONE_DAY_SECONDS);
+            const startTime = midnight - (day - 1) * ONE_DAY_SECONDS;
             const endTime = this.getNowTime();
             const weekTime = await this.timeManager.get(req.params.serverID, startTime, endTime);
-            this.processData(weekTime, req.params.serverID, startTime, endTime).then(data => {
+            this.processData(weekTime, req.params.serverID, startTime, endTime).then((data) => {
                 res.status(http_status_codes_1.StatusCodes.OK).json({ data });
             });
         }
@@ -163,9 +163,9 @@ class Web {
         const now = this.getNowTime();
         if (endTime > now)
             endTime = now;
-        if (!isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
+        if (!Number.isNaN(startTime) && !Number.isNaN(endTime) && startTime < endTime) {
             const customTime = await this.timeManager.get(req.params.serverID, startTime, endTime);
-            this.processData(customTime, req.params.serverID, startTime, endTime).then(data => {
+            this.processData(customTime, req.params.serverID, startTime, endTime).then((data) => {
                 res.status(http_status_codes_1.StatusCodes.OK).json({ data });
             });
         }
@@ -191,7 +191,9 @@ class Web {
             if (dataRaw[key] === undefined)
                 return;
             const rawData = dataRaw[key];
-            await this.Bot.getRESTGuildMember(serverID, key).then(async (user) => {
+            await this._bot
+                .getRESTGuildMember(serverID, key)
+                .then(async (user) => {
                 const userName = user.nick ? user.nick : user.username;
                 let lastActivity;
                 for (const activity of rawData) {
@@ -220,11 +222,25 @@ class Web {
                                     break;
                                 }
                                 case 'leave': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'offline',
+                                        title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'afk': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'afk',
+                                        title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'back': {
@@ -232,7 +248,14 @@ class Web {
                                     break;
                                 }
                                 default: {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'unknown',
+                                        title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                             }
@@ -241,7 +264,14 @@ class Web {
                         case 'leave': {
                             switch (lastActivity.type) {
                                 case 'join': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'online',
+                                        title: `Online<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'leave': {
@@ -249,15 +279,36 @@ class Web {
                                     break;
                                 }
                                 case 'afk': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'afk',
+                                        title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'back': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'online',
+                                        title: `Online<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 default: {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'unknown',
+                                        title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                             }
@@ -266,11 +317,25 @@ class Web {
                         case 'afk': {
                             switch (lastActivity.type) {
                                 case 'join': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'online',
+                                        title: `Online<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'leave': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'offline',
+                                        title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'afk': {
@@ -278,11 +343,25 @@ class Web {
                                     break;
                                 }
                                 case 'back': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'online',
+                                        title: `Online<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 default: {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'unknown',
+                                        title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                             }
@@ -295,11 +374,25 @@ class Web {
                                     break;
                                 }
                                 case 'leave': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'offline', title: `Offline<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'offline',
+                                        title: `Offline<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'afk': {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'afk', title: `AFK<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'afk',
+                                        title: `AFK<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                                 case 'back': {
@@ -307,14 +400,28 @@ class Web {
                                     break;
                                 }
                                 default: {
-                                    dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}` });
+                                    dataSets.push({
+                                        content: '',
+                                        start: lastActivity.time,
+                                        end: activity.time,
+                                        group: userName,
+                                        className: 'unknown',
+                                        title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                                    });
                                     break;
                                 }
                             }
                             break;
                         }
                         default: {
-                            dataSets.push({ content: '', start: lastActivity.time, end: activity.time, group: userName, className: 'unknown', title: `Unknown<br>${lastActivity.time} - ${activity.time}` });
+                            dataSets.push({
+                                content: '',
+                                start: lastActivity.time,
+                                end: activity.time,
+                                group: userName,
+                                className: 'unknown',
+                                title: `Unknown<br>${lastActivity.time} - ${activity.time}`
+                            });
                             break;
                         }
                     }
@@ -322,7 +429,7 @@ class Web {
                         lastActivity = activity;
                 }
                 if (lastActivity !== undefined) {
-                    const now = ((endTime !== undefined) ? moment_1.default.unix(endTime) : (0, moment_1.default)()).format('YYYY-MM-DD HH:mm:ss');
+                    const now = (endTime !== undefined ? moment_1.default.unix(endTime) : (0, moment_1.default)()).format('YYYY-MM-DD HH:mm:ss');
                     switch (lastActivity.type) {
                         case 'join': {
                             dataSets.push({ content: '', start: lastActivity.time, end: now, group: userName, className: 'online', title: `Online<br>${lastActivity.time} - ${now}` });
@@ -349,10 +456,12 @@ class Web {
                     id: userName,
                     content: `<img class="avatar" src="${user.avatarURL}" /><span class="name">${(user.nick ? user.nick : user.username).substr(0, 20)}</span>`
                 });
-            }).catch(() => {
+            })
+                .catch((e) => {
+                console.error(e);
             });
         }
-        let time = (startTime !== undefined) ? startTime : raw[0].timeStamp;
+        let time = startTime !== undefined ? startTime : raw[0].timeStamp;
         const end = Math.round(Date.now() / 1000);
         for (; time < end; time += ONE_DAY_SECONDS) {
             const date = new Date(time * 1000);
@@ -363,8 +472,8 @@ class Web {
         }
         return {
             properties: {
-                startTime: moment_1.default.unix((startTime !== undefined) ? startTime : raw[0].timeStamp).format('YYYY-MM-DD HH:mm:ss'),
-                endTime: moment_1.default.unix((endTime !== undefined) ? endTime : end).format('YYYY-MM-DD HH:mm:ss')
+                startTime: moment_1.default.unix(startTime !== undefined ? startTime : raw[0].timeStamp).format('YYYY-MM-DD HH:mm:ss'),
+                endTime: moment_1.default.unix(endTime !== undefined ? endTime : end).format('YYYY-MM-DD HH:mm:ss')
             },
             groups,
             dataSets
@@ -392,7 +501,7 @@ class Web {
             const time = new Date();
             const midnight = time.setHours(0, 0, 0, 0) / 1000;
             const day = time.getDay() === 0 ? 7 : time.getDay();
-            const startTime = (midnight - (day - 1) * ONE_DAY_SECONDS);
+            const startTime = midnight - (day - 1) * ONE_DAY_SECONDS;
             const endTime = this.getNowTime();
             const cacheTTL = (8 - day) * ONE_DAY_SECONDS;
             serverID.forEach(async (id) => {

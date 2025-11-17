@@ -1,6 +1,6 @@
+import { EventEmitter } from 'node:events'
+import { readFileSync as readFile } from 'node:fs'
 import type { CommandClient } from 'eris'
-import { EventEmitter } from 'events'
-import { readFileSync as readFile } from 'fs'
 import { Bot } from './Component/Bot'
 import { Web } from './Component/Web'
 import { CacheManager } from './Core/CacheManager'
@@ -14,9 +14,9 @@ export class Core extends EventEmitter {
   public readonly config: Config = JSON.parse(readFile('config.json', { encoding: 'utf-8' }))
   public readonly database = new MongoDB(this.config)
   public readonly cache = new Redis(this.config)
-  public readonly TimeManager = new TimeManager(this)
-  public readonly CacheManager = new CacheManager(this)
-  public readonly SetManager = new SetManager(this)
+  public readonly _timeManager = new TimeManager(this)
+  public readonly _cacheManager = new CacheManager(this)
+  public readonly _setManager = new SetManager(this)
   public bot: CommandClient | null | undefined
 
   constructor() {

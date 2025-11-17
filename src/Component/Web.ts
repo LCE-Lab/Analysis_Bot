@@ -1,3 +1,4 @@
+import { parse, URLSearchParams } from 'node:url'
 import cors from 'cors'
 import type { CommandClient, Member } from 'eris'
 import express, { type Application, type NextFunction, type Request, type Response } from 'express'
@@ -8,7 +9,6 @@ import morgan from 'morgan'
 import fetch from 'node-fetch'
 import schedule from 'node-schedule'
 import SunCalc from 'suncalc'
-import { parse, URLSearchParams } from 'url'
 import type { Core } from '..'
 import type { CacheManager } from '../Core/CacheManager'
 import type { WebConfig } from '../Core/Config'
@@ -21,14 +21,14 @@ export class Web {
   private server: Application
   private timeManager: TimeManager
   private cacheManager: CacheManager
-  private Bot: CommandClient
+  private _bot: CommandClient
 
   constructor(core: Core) {
     this.config = core.config.web
-    this.timeManager = core.TimeManager
-    this.cacheManager = core.CacheManager
-    if (core.bot !== null || core.bot !== undefined) {
-      this.Bot = core.bot!
+    this.timeManager = core._timeManager
+    this.cacheManager = core._cacheManager
+    if (core.bot !== null && core.bot !== undefined) {
+      this._bot = core.bot
     } else {
       throw new Error('Discord Client not defined')
     }
@@ -66,7 +66,7 @@ export class Web {
     this.server.use(morgan('[Web] :remote-addr [:date[clf]] ":method :url HTTP/:http-version" :status :response-time ms - :res[content-length]'))
   }
 
-  private async checkRequst(req: Request, res: Response, next: NextFunction) {
+  private async checkRequst(req: Request, _res: Response, next: NextFunction) {
     const reqURL = parse(req.url).query as string
     const reg = /\[\w+\]/
     if (reg.test(reqURL)) {
@@ -76,8 +76,7 @@ export class Web {
   }
 
   private async errorHandler() {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-    this.server.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    this.server.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       if (err.message) {
         res.status(getStatusCode(err.message)).json({
           error: err.message
@@ -86,7 +85,6 @@ export class Web {
     })
   }
 
-  // eslint-disable-next-line no-unused-vars
   private route(fn: (req: Request, res: Response, next: NextFunction) => Promise<void> | void) {
     return (req: Request, res: Response, next: NextFunction) => {
       const promise = fn.bind(this)(req, res, next)
@@ -97,15 +95,14 @@ export class Web {
   }
 
   private async registerRoutes() {
-    this.server.get('/api', (req: Request, res: Response) => res.send('Analysis Bot Web Server'))
+    this.server.get('/api', (_req: Request, res: Response) => res.send('Analysis Bot Web Server'))
     this.server.get('/api/day/:serverID', this.route(this.getDay))
     this.server.get('/api/week/:serverID', this.route(this.getWeek))
     this.server.get('/api/custom/:serverID', this.route(this.getCustomTime))
     this.server.get('*', this.route(this.errorURL))
   }
 
-  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-  private async errorURL(req: Request, res: Response) {
+  private async errorURL(_req: Request, _res: Response) {
     throw new Error(ReasonPhrases.NOT_FOUND)
   }
 
@@ -184,7 +181,7 @@ export class Web {
 
     if (endTime > now) endTime = now
 
-    if (!isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
+    if (!Number.isNaN(startTime) && !Number.isNaN(endTime) && startTime < endTime) {
       const customTime = await this.timeManager.get(req.params.serverID, startTime, endTime)
 
       this.processData(customTime, req.params.serverID, startTime, endTime).then((data) => {
@@ -214,7 +211,8 @@ export class Web {
       if (dataRaw[key] === undefined) return
 
       const rawData = dataRaw[key]
-      await this.Bot.getRESTGuildMember(serverID, key)
+      await this._bot
+        .getRESTGuildMember(serverID, key)
         .then(async (user: Member) => {
           const userName = user.nick ? user.nick : user.username
           let lastActivity: { time: string; type: string } | undefined
@@ -482,7 +480,9 @@ export class Web {
             content: `<img class="avatar" src="${user.avatarURL}" /><span class="name">${(user.nick ? user.nick : user.username).substr(0, 20)}</span>`
           })
         })
-        .catch(() => {})
+        .catch((e) => {
+          console.error(e)
+        })
     }
 
     // Sunrise Sunset

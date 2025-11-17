@@ -46,7 +46,7 @@ class SetManager {
         else if (continuousChannelID && continuousDisplay !== null) {
             set = { $set: { 'settings.continuousChannelID': continuousChannelID, 'settings.continuousDisplay': continuousDisplay } };
         }
-        return (await this.database.findOneAndUpdate({ serverID }, set, { upsert: true }));
+        return await this.database.findOneAndUpdate({ serverID }, set, { upsert: true });
     }
 }
 exports.SetManager = SetManager;

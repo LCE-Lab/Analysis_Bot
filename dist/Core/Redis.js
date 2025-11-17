@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Redis = exports.ERR_DB_NOT_INIT = void 0;
-const events_1 = require("events");
+const node_events_1 = require("node:events");
 const redis_1 = require("redis");
 exports.ERR_DB_NOT_INIT = Error('Redis is not initialized');
-class Redis extends events_1.EventEmitter {
+class Redis extends node_events_1.EventEmitter {
     client;
     constructor(config) {
         super();

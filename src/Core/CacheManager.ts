@@ -15,6 +15,7 @@ export class CacheManager {
   public async setByTTL(key: string, value: string, ttl: number) {
     if (!this.client) throw ERR_DB_NOT_INIT
 
+    // biome-ignore lint/style/useNamingConvention: Usage in API
     await this.client.set(key, value, { EX: ttl })
   }
 
