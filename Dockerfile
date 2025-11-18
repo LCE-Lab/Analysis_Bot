@@ -28,6 +28,7 @@ RUN npm remove -g yarn
 RUN npm remove -g npm
 RUN rm -r /opt/yarn-v1.22.22/
 
+WORKDIR /app
 COPY --from=prod /app/node_modules /app/node_modules
 COPY --from=builder /app/dist /app/dist
 EXPOSE 8080
