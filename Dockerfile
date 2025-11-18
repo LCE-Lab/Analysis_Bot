@@ -20,6 +20,13 @@ RUN pnpm run build
 
 FROM node:24-alpine
 ENV NODE_ENV=production
+
+# Remove system package in production
+RUN npm remove -g corepack
+RUN npm remove -g yarn
+RUN npm remove -g npm
+RUN rm -r /opt/yarn-v1.22.22/
+
 COPY --from=prod /app/node_modules /app/node_modules
 COPY --from=builder /app/dist /app/dist
 EXPOSE 8080
