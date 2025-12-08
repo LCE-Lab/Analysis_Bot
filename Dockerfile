@@ -21,6 +21,7 @@ RUN pnpm run build
 
 FROM node:24-alpine
 ENV NODE_ENV=production
+RUN apk -U upgrade
 
 # Remove system package in production
 RUN npm remove -g corepack
