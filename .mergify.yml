@@ -87,3 +87,5 @@ pull_request_rules:
     actions:
       queue:
         name: prod-queue
+merge_protections_settings:
+  reporting_method: check-runs
