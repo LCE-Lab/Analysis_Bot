@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
@@ -32,12 +34,35 @@ jobs:
           push: false
           tags: ${{ steps.meta.outputs.tags }}
 
+      - name: Detect dependency changes
+        id: dependencies
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }} --depth=1
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -E '(yarn.lock|Dockerfile)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "### Note" >> $GITHUB_STEP_SUMMARY
+            echo "No dependency files changed. Skipping failure on vulnerabilities." >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           output: trivy.md
           trivy-config: trivy.yaml
+          exit-code: ${{ steps.dependencies.outputs.changed == 'true' && '1' || '0' }}
 
       - name: Publish Trivy Output to Summary
         if: always()
