@@ -1,36 +1,33 @@
 {
-    "bot": {
-        "token": "",
-        "prefix": "?",
-        "admin": [
-            "userID"
-        ],
-        "embed": {
-            "color": 4886754,
-            "errorColor": 13632027,
-            "rank": {
-                "description": "Rank"
-            }
-        },
-        "messageCooldownSecond": 300
+  "bot": {
+    "token": "",
+    "admin": ["userID"],
+    "embed": {
+      "color": 4886754,
+      "errorColor": 13632027,
+      "rank": {
+        "description": "Rank"
+      }
     },
-    "database": {
-        "host": "mongodb://localhost:27017",
-        "name": "analysisbot"
+    "messageCooldownSecond": 300
+  },
+  "database": {
+    "host": "mongodb://localhost:27017",
+    "name": "analysisbot"
+  },
+  "cache": {
+    "host": "redis://127.0.0.1:6379"
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "devPort": 8081,
+    "devMode": false,
+    "origin": "*",
+    "recaptcha": {
+      "secretKey": "",
+      "minScore": 0.7
     },
-    "cache": {
-        "host": "redis://127.0.0.1:6379"
-    },
-    "web": {
-        "host": "0.0.0.0",
-        "port": 8080,
-        "devPort": 8081,
-        "devMode": false,
-        "origin": "*",
-        "recaptcha": {
-            "secretKey": "",
-            "minScore": 0.7
-        },
-        "cacheDayTTL": 10
-    }
+    "cacheDayTTL": 10
+  }
 }
