@@ -94,7 +94,7 @@ typings/
 Data
 
 # Typescript mapper file
-dist/**/*.map
+dist/
 
 # Config
 config.json

@@ -1,11 +1,11 @@
-import { CommandClient, Member, Message, MessageContent, VoiceChannel } from 'eris'
+import { CommandClient, type Member, type Message, type MessageContent, type VoiceChannel } from 'eris'
 import moment from 'moment'
 import schedule from 'node-schedule'
-import { Core } from '..'
-import { CacheManager } from '../Core/CacheManager'
-import { SetManager } from '../Core/SetManager'
-import { ITime, TimeManager } from '../Core/TimeManager'
-import { BotConfig } from '../Core/Config'
+import type { Core } from '..'
+import type { CacheManager } from '../Core/CacheManager'
+import type { BotConfig } from '../Core/Config'
+import type { SetManager } from '../Core/SetManager'
+import type { ITime, TimeManager } from '../Core/TimeManager'
 
 const ONE_DAY_SECONDS = 86400
 
@@ -19,18 +19,17 @@ export class Bot {
 
   constructor(core: Core) {
     this.config = core.config.bot
-    this.timeManager = core.TimeManager
-    this.cacheManager = core.CacheManager
-    this.setManager = core.SetManager
+    this.timeManager = core._timeManager
+    this.cacheManager = core._cacheManager
+    this.setManager = core._setManager
     this.cooldown = new Set()
 
     if (!this.config.token) throw Error('Discord token missing')
 
-    this.bot = new CommandClient(
-      this.config.token,
-      { restMode: true, intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers'] },
-      { prefix: this.config.prefix }
-    )
+    this.bot = new CommandClient(this.config.token, {
+      restMode: true,
+      intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers']
+    })
 
     this.bot.on('ready', () => {
       console.log('[Discord] Ready!')
@@ -46,10 +45,10 @@ export class Bot {
       const afkChannel = newChannel.guild.afkChannelID
 
       if (member.bot) return
-      const type = (afkChannel !== null) ? ((newChannel.id === afkChannel) ? 'afk' : 'join') : 'join'
+      const type = afkChannel !== null ? (newChannel.id === afkChannel ? 'afk' : 'join') : 'join'
       this.timeManager.create(serverID, userID, joinTimeStamp, type)
 
-      this.genContinuous(serverID, userID, joinTimeStamp).then(async result => {
+      this.genContinuous(serverID, userID, joinTimeStamp).then(async (result) => {
         if (this.cooldown.has(userID)) return
         this.cooldown.add(userID)
         const serverSetting = await this.setManager.get(serverID)
@@ -111,25 +110,28 @@ export class Bot {
   }
 
   private async commandGet(msg: Message, args: string[]) {
+    const member = msg.member
+    if (!member) return
+
     const type = args[0]
-    const serverID = msg.member!.guild.id
+    const serverID = member.guild.id
     const userID = args[1]
     let user: Member | undefined
     try {
-      user = (await this.bot.getRESTGuildMember(serverID, userID))
+      user = await this.bot.getRESTGuildMember(serverID, userID)
     } catch {
       msg.channel.createMessage(await this.genErrorMessage('User not found', user))
       return
     }
-    let startTime: number
-    let endTime: number
+    let startTime = new Date().setHours(0, 0, 0, 0) / 1000
+    let endTime = startTime + ONE_DAY_SECONDS
 
     const year = new Date().getFullYear()
     const month = new Date().getMonth() + 1
     const midnight = new Date().setHours(0, 0, 0, 0) / 1000
     const day = new Date().getDay()
-    const monday = (midnight - (day - 1) * ONE_DAY_SECONDS)
-    const sunday = (midnight + (7 - day) * ONE_DAY_SECONDS)
+    const monday = midnight - (day - 1) * ONE_DAY_SECONDS
+    const sunday = midnight + (7 - day) * ONE_DAY_SECONDS
     const nowTime = Math.floor(Date.now() / 1000)
     const continuousDay = await this.genContinuous(serverID, userID, nowTime)
 
@@ -151,13 +153,13 @@ export class Bot {
         return
     }
 
-    const Time = await this.timeManager.getByUser(msg.member!.guild.id, userID, startTime!, endTime!)
-    this.genTimeData(Time, msg.member!.guild.id, startTime!, undefined).then(async result => {
-      if (user) {
-        if (result![userID] !== undefined) {
-          msg.channel.createMessage(await this.genStatusMessage(user, result![userID].online, result![userID].offline, result![userID].afk))
+    const Time = await this.timeManager.getByUser(member.guild.id, userID, startTime, endTime)
+    this.genTimeData(Time, member.guild.id, startTime, undefined).then(async (result) => {
+      if (user && result) {
+        if (result[userID] !== undefined) {
+          msg.channel.createMessage(await this.genStatusMessage(user, result[userID].online, result[userID].offline, result[userID].afk))
         } else {
-          const lastData = await this.timeManager.getLastDataByUser(msg.member!.guild.id, userID, startTime)
+          const lastData = await this.timeManager.getLastDataByUser(member.guild.id, userID, startTime)
           if (lastData.length !== 0) {
             let onlineTotal = 0
             let offlineTotal = 0
@@ -190,9 +192,12 @@ export class Bot {
   }
 
   private async commandSet(msg: Message, args: string[]) {
-    const serverID = msg.member!.guild.id
+    const member = msg.member
+    if (!member) return
 
-    if (!(msg.member!.permissions.has('manageMessages')) && !(this.config.admin.includes(msg.member!.id))) {
+    const serverID = member.guild.id
+
+    if (!member.permissions.has('manageMessages') && !this.config.admin.includes(member.id)) {
       msg.channel.createMessage('You do not have permission!')
       return
     }
@@ -207,7 +212,7 @@ export class Bot {
       case 'rank':
         if (args[1] === 'on') {
           this.setManager.update(serverID, msg.channel.id, true, null, null)
-          msg.channel.createMessage('Rank display has been turned on!\nI\'ll now send ranking every day at 0:00 to this channel.')
+          msg.channel.createMessage("Rank display has been turned on!\nI'll now send ranking every day at 0:00 to this channel.")
         } else if (args[1] === 'off') {
           this.setManager.update(serverID, msg.channel.id, false, null, null)
           msg.channel.createMessage('Rank display has been turned off!')
@@ -216,7 +221,7 @@ export class Bot {
       case 'continuous':
         if (args[1] === 'on') {
           this.setManager.update(serverID, null, null, msg.channel.id, true)
-          msg.channel.createMessage('Continuous display has been turned on!\nI\'ll now send continuous status to this channel on user joined voice channel.')
+          msg.channel.createMessage("Continuous display has been turned on!\nI'll now send continuous status to this channel on user joined voice channel.")
         } else if (args[1] === 'off') {
           this.setManager.update(serverID, null, null, msg.channel.id, false)
           msg.channel.createMessage('Continuous display has been turned off!')
@@ -246,7 +251,7 @@ export class Bot {
     let count = 0
 
     if (!(await this.cacheManager.get(continuousKey))) {
-      while (await this.timeManager.getCountByUserAndType(serverID, userID, searchStartTime, searchEndTime, 'join') !== 0) {
+      while ((await this.timeManager.getCountByUserAndType(serverID, userID, searchStartTime, searchEndTime, 'join')) !== 0) {
         count++
         searchEndTime = searchStartTime
         searchStartTime -= ONE_DAY_SECONDS
@@ -256,26 +261,28 @@ export class Bot {
       this.cacheManager.set(lastKey, timestamp.toString())
     }
 
-    const lastChange = parseInt(await this.cacheManager.get(lastKey) ?? timestamp.toString())
+    const lastChange = parseInt((await this.cacheManager.get(lastKey)) ?? timestamp.toString(), 10)
 
-    if (lastChange >= yesterdayTime && lastChange < midnightTime) { // yesterday
+    if (lastChange >= yesterdayTime && lastChange < midnightTime) {
+      // yesterday
       this.cacheManager.incr(continuousKey)
       this.cacheManager.set(lastKey, timestamp.toString())
 
-      return parseInt(await this.cacheManager.get(continuousKey) ?? count.toString())
-    } else if (lastChange >= midnightTime && lastChange < tomorrowTime) { // today
-      return parseInt(await this.cacheManager.get(continuousKey) ?? count.toString())
+      return parseInt((await this.cacheManager.get(continuousKey)) ?? count.toString(), 10)
+    }
+    if (lastChange >= midnightTime && lastChange < tomorrowTime) {
+      // today
+      return parseInt((await this.cacheManager.get(continuousKey)) ?? count.toString(), 10)
     }
     this.cacheManager.set(continuousKey, '1')
     this.cacheManager.set(lastKey, timestamp.toString())
 
-    return parseInt(await this.cacheManager.get(continuousKey) ?? '1')
-
+    return parseInt((await this.cacheManager.get(continuousKey)) ?? '1', 10)
   }
 
   private async genTimeData(raw: ITime[], serverID: string, startTime: number | undefined, endTime: number | undefined) {
-    const dataRaw: { [key: string]: Array<{ time: string, type: string }> } = {}
-    const data: { [key: string]: { online: number, offline: number, afk: number } } = {}
+    const dataRaw: { [key: string]: Array<{ time: string; type: string }> } = {}
+    const data: { [key: string]: { online: number; offline: number; afk: number } } = {}
     let onlineTotal = 0
     let offlineTotal = 0
     let afkTotal = 0
@@ -292,7 +299,7 @@ export class Bot {
       if (dataRaw[key] === undefined) return
 
       const rawData = dataRaw[key]
-      let lastActivity: { time: string, type: string } | undefined
+      let lastActivity: { time: string; type: string } | undefined
 
       onlineTotal = 0
       offlineTotal = 0
@@ -405,7 +412,7 @@ export class Bot {
 
       // last record
       if (lastActivity !== undefined) {
-        const now = ((endTime !== undefined) ? moment.unix(endTime) : moment()).format('YYYY-MM-DD HH:mm:ss')
+        const now = (endTime !== undefined ? moment.unix(endTime) : moment()).format('YYYY-MM-DD HH:mm:ss')
 
         switch (lastActivity.type) {
           case 'join': {
@@ -434,20 +441,23 @@ export class Bot {
 
   private async genErrorMessage(text: string, user: Member | undefined) {
     return {
-      embed: (user === undefined) ? {
-        color: this.config.embed.errorColor,
-        description: text,
-        title: 'Error'
-      } : {
-        color: this.config.embed.errorColor,
-        author: {
-          name: user.nick ? user.nick : user.username,
-
-          icon_url: user.avatarURL
-        },
-        description: text,
-        title: 'Error'
-      }
+      embed:
+        user === undefined
+          ? {
+              color: this.config.embed.errorColor,
+              description: text,
+              title: 'Error'
+            }
+          : {
+              color: this.config.embed.errorColor,
+              author: {
+                name: user.nick ? user.nick : user.username,
+                // biome-ignore lint/style/useNamingConvention: Usage in API
+                icon_url: user.avatarURL
+              },
+              description: text,
+              title: 'Error'
+            }
     } as MessageContent
   }
 
@@ -463,7 +473,7 @@ export class Bot {
         color: this.config.embed.color,
         author: {
           name: user.nick ? user.nick : user.username,
-
+          // biome-ignore lint/style/useNamingConvention: Usage in API
           icon_url: user.avatarURL
         },
         fields,
@@ -472,10 +482,10 @@ export class Bot {
     } as MessageContent
   }
 
-  private async genRankMessage(rank: Array<{ user: string, online: number }>) {
-    const fields: Array<{ name: string; value: string; }> = []
+  private async genRankMessage(rank: Array<{ user: string; online: number }>) {
+    const fields: Array<{ name: string; value: string }> = []
 
-    rank.forEach(result => {
+    rank.forEach((result) => {
       if (result.online <= 0) return
       fields.push({ name: `**No.${rank.indexOf(result) + 1}** (${this.getDuration(result.online)})`, value: result.user })
     })
@@ -494,14 +504,14 @@ export class Bot {
     const tenthNumber = (continuousDay / 10) % 10
     const oneNumber = continuousDay % 10
 
-    const day = continuousDay + ((tenthNumber === 1 || (oneNumber === 0 || oneNumber >= 4)) ? 'th' : ((oneNumber === 1) ? 'st' : ((oneNumber === 2) ? 'nd' : 'rd')))
+    const day = continuousDay + (tenthNumber === 1 || oneNumber === 0 || oneNumber >= 4 ? 'th' : oneNumber === 1 ? 'st' : oneNumber === 2 ? 'nd' : 'rd')
 
     return {
       embed: {
         color: this.config.embed.color,
         author: {
           name: user.nick ? user.nick : user.username,
-
+          // biome-ignore lint/style/useNamingConvention: Usage in API
           icon_url: user.avatarURL
         },
         description: `Joined the voice channel for the **${day}** consecutive day`
@@ -516,11 +526,11 @@ export class Bot {
     let minutes = duration.minutes().toString()
     let seconds = duration.seconds().toString()
 
-    hours = Number(hours) < 10 ? '0' + hours : hours
-    minutes = Number(minutes) < 10 ? '0' + minutes : minutes
-    seconds = Number(seconds) < 10 ? '0' + seconds : seconds
+    hours = Number(hours) < 10 ? `0${hours}` : hours
+    minutes = Number(minutes) < 10 ? `0${minutes}` : minutes
+    seconds = Number(seconds) < 10 ? `0${seconds}` : seconds
 
-    const durationText = days + ':' + hours + ':' + minutes + ':' + seconds
+    const durationText = `${days}:${hours}:${minutes}:${seconds}`
 
     return durationText
   }
@@ -529,19 +539,20 @@ export class Bot {
     schedule.scheduleJob('0 0 * * *', async () => {
       const settings = await this.setManager.getAll()
 
-      settings.forEach(async setting => {
+      settings.forEach(async (setting) => {
         if (setting.settings.rankDisplay) {
           const endTime = new Date().setHours(0, 0, 0, 0) / 1000
           const startTime = endTime - 86400
           const time = await this.timeManager.get(setting.serverID, startTime, endTime)
 
-          this.genTimeData(time, setting.serverID, startTime, endTime).then(async data => {
-            const dataAsArray: Array<{ user: string, online: number }> = []
+          this.genTimeData(time, setting.serverID, startTime, endTime).then(async (data) => {
+            if (!data) return
+            const dataAsArray: Array<{ user: string; online: number }> = []
 
-            for (const key of Object.keys(data!)) {
+            for (const key of Object.keys(data)) {
               const user = await this.bot.getRESTGuildMember(setting.serverID, key)
               const username = user.nick ? user.nick : user.username
-              dataAsArray.push({ user: username, online: data![key].online })
+              dataAsArray.push({ user: username, online: data[key].online })
             }
             dataAsArray.sort((a, b) => {
               return b.online - a.online

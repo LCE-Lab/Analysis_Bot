@@ -1,6 +1,6 @@
-import { Core } from '..'
+import type { RedisClientType } from 'redis'
+import type { Core } from '..'
 import { ERR_DB_NOT_INIT } from './Redis'
-import { RedisClientType } from 'redis'
 
 export class CacheManager {
   private client: RedisClientType | undefined
@@ -15,7 +15,8 @@ export class CacheManager {
   public async setByTTL(key: string, value: string, ttl: number) {
     if (!this.client) throw ERR_DB_NOT_INIT
 
-    await this.client.set(key, value, { EX:ttl })
+    // biome-ignore lint/style/useNamingConvention: Usage in API
+    await this.client.set(key, value, { EX: ttl })
   }
 
   public async set(key: string, value: string) {

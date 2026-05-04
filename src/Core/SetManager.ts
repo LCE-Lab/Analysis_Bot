@@ -1,16 +1,16 @@
-import { Collection, ObjectId } from 'mongodb'
-import { Core } from '..'
+import type { Collection, ObjectId } from 'mongodb'
+import type { Core } from '..'
 import { ERR_DB_NOT_INIT } from './MongoDB'
 
 export interface ISet {
-  _id: ObjectId;
-  serverID: string;
+  _id: ObjectId
+  serverID: string
   settings: {
-    rankChannelID: string;
-    rankDisplay: boolean;
-    continuousChannelID: string;
-    continuousDisplay: boolean;
-  };
+    rankChannelID: string
+    rankDisplay: boolean
+    continuousChannelID: string
+    continuousDisplay: boolean
+  }
 }
 
 export class SetManager {
@@ -56,7 +56,7 @@ export class SetManager {
   public async update(serverID: string, rankChannelID: string | null, rankDisplay: boolean | null, continuousChannelID: string | null, continuousDisplay: boolean | null) {
     if (!this.database) throw ERR_DB_NOT_INIT
 
-    let set = { }
+    let set = {}
 
     if (rankChannelID && rankDisplay !== null) {
       set = { $set: { 'settings.rankChannelID': rankChannelID, 'settings.rankDisplay': rankDisplay } }
@@ -64,10 +64,6 @@ export class SetManager {
       set = { $set: { 'settings.continuousChannelID': continuousChannelID, 'settings.continuousDisplay': continuousDisplay } }
     }
 
-    return (await this.database.findOneAndUpdate(
-      { serverID },
-      set,
-      { upsert: true }
-    ))
+    return await this.database.findOneAndUpdate({ serverID }, set, { upsert: true })
   }
 }
