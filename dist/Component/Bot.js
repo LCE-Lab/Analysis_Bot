@@ -23,7 +23,10 @@ class Bot {
         this.cooldown = new Set();
         if (!this.config.token)
             throw Error('Discord token missing');
-        this.bot = new eris_1.CommandClient(this.config.token, { restMode: true, intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers'] }, { prefix: this.config.prefix });
+        this.bot = new eris_1.CommandClient(this.config.token, {
+            restMode: true,
+            intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers']
+        });
         this.bot.on('ready', () => {
             console.log('[Discord] Ready!');
             core.bot = this.bot;

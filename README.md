@@ -14,12 +14,12 @@ Or you can copy dist and rename it production
 Then run `pm2 reload ecosystem.config.js`
 
 # Command
-The default prefix is `?`.  
-You can modify it from config.example.json.
+To use command from this bot, mention the bot.
+For example: `@Analysis help`
 
-- `?get [day|week|month] <userID>`  
+- `@Analysis get [day|week|month] <userID>`  
   - Get user online offline data.
-- `?rank [on|off]`
+- `@Analysis rank [on|off]`
   - Switch rank display.
   - Only administrator or add userID to admin in config.example.json.
   - The default value is off
