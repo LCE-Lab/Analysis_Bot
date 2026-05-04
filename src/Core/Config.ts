@@ -10,7 +10,6 @@ export interface BotEmbed {
 
 export interface BotConfig {
   token: string
-  prefix: string
   admin: string[]
   embed: BotEmbed
   messageCooldownSecond: number

@@ -26,11 +26,10 @@ export class Bot {
 
     if (!this.config.token) throw Error('Discord token missing')
 
-    this.bot = new CommandClient(
-      this.config.token,
-      { restMode: true, intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers'] },
-      { prefix: this.config.prefix }
-    )
+    this.bot = new CommandClient(this.config.token, {
+      restMode: true,
+      intents: ['guilds', 'guildIntegrations', 'guildMessages', 'guildVoiceStates', 'guildMembers']
+    })
 
     this.bot.on('ready', () => {
       console.log('[Discord] Ready!')
